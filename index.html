@@ -297,7 +297,7 @@
          Student | Hearts
     */
 
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzLsmd7MqbtULT_wSvHADJoz0-sTX816t8IT2-HuNomppsWyVToEH7P7zmHo1Y2ZagE/exec";
+    const WEB_APP_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
 
     const SPECIAL_SIXTH_EMOJI = "💛";
     const STAR_EMOJI = "🌟";
@@ -350,7 +350,7 @@
       }
 
       leaderboardEl.innerHTML = studentsCache.map((student, index) => {
-        const rank = index + 1;
+        const rank = getCompetitionRank(index);
         const rankClass = rank === 1 ? "first" : rank === 2 ? "second" : rank === 3 ? "third" : "";
         const safeName = escapeHTML(student.name);
         const pendingText = student.pending ? "Saving..." : `${student.hearts} hearts`;
@@ -370,6 +370,22 @@
           </article>
         `;
       }).join("");
+    }
+
+    function getCompetitionRank(index) {
+      if (index === 0) return 1;
+
+      const currentHearts = Number(studentsCache[index].hearts) || 0;
+
+      for (let i = index - 1; i >= 0; i--) {
+        const previousHearts = Number(studentsCache[i].hearts) || 0;
+
+        if (previousHearts !== currentHearts) {
+          return i + 2;
+        }
+      }
+
+      return 1;
     }
 
     function toggleAddPanel() {
