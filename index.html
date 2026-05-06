@@ -13,6 +13,7 @@
       --muted: #6b7280;
       --border: #e5e7eb;
       --accent: #2563eb;
+      --danger: #dc2626;
       --gold: #f59e0b;
       --silver: #9ca3af;
       --bronze: #b45309;
@@ -30,7 +31,7 @@
     }
 
     .page {
-      max-width: 900px;
+      max-width: 960px;
       margin: 0 auto;
       padding: 32px 16px;
     }
@@ -50,13 +51,38 @@
       color: var(--muted);
     }
 
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+    }
+
     .controls {
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 12px;
-      margin-bottom: 16px;
       flex-wrap: wrap;
+    }
+
+    .admin-form {
+      display: grid;
+      grid-template-columns: 1fr 110px 120px 110px;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    input {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 1rem;
+      background: white;
+      color: var(--text);
     }
 
     .status {
@@ -76,6 +102,10 @@
 
     button:hover {
       opacity: 0.9;
+    }
+
+    .danger {
+      background: var(--danger);
     }
 
     .leaderboard {
@@ -146,7 +176,11 @@
       border-radius: 12px;
     }
 
-    @media (max-width: 600px) {
+    @media (max-width: 700px) {
+      .admin-form {
+        grid-template-columns: 1fr;
+      }
+
       .student-card {
         grid-template-columns: 48px 1fr;
       }
@@ -162,12 +196,21 @@
   <main class="page">
     <section class="header">
       <h1>Class Leaderboard</h1>
-      <p>Hearts update from Google Sheets.</p>
+      <p>Read and update hearts from Google Sheets.</p>
     </section>
 
-    <section class="controls">
-      <div id="status" class="status">Loading leaderboard...</div>
-      <button onclick="loadLeaderboard()">Refresh</button>
+    <section class="panel">
+      <div class="controls">
+        <div id="status" class="status">Loading leaderboard...</div>
+        <button onclick="loadLeaderboard()">Refresh</button>
+      </div>
+
+      <form id="adminForm" class="admin-form">
+        <input id="studentName" type="text" placeholder="Student name" required />
+        <input id="heartChange" type="number" placeholder="+1 / -1" value="1" required />
+        <input id="teacherPin" type="password" placeholder="Teacher PIN" required />
+        <button type="submit">Update</button>
+      </form>
     </section>
 
     <section id="leaderboard" class="leaderboard"></section>
@@ -175,17 +218,15 @@
 
   <script>
     /*
-      STEP 1
-      Publish your Google Sheet as CSV.
-
-      Your Google Sheet should have these exact headers:
-      Student | Hearts
-
-      STEP 2
-      Paste your published CSV link below.
+      SETUP
+      1. Publish your Google Sheet as CSV and paste the CSV link below.
+      2. Deploy the Apps Script backend as a Web App and paste its URL below.
+      3. Your Google Sheet should have these headers:
+         Student | Hearts
     */
 
-    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ8jr7tiKDUBeJta25XXvF54mnMs6UOx84_0AEMKBtqMQ0rvsFcLtdul_f8990pySiBavrhxNkFj3K2/pub?gid=645769912&single=true&output=csv";
+    const CSV_URL = "PASTE_YOUR_GOOGLE_SHEETS_CSV_LINK_HERE";
+    const WEB_APP_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
 
     const SPECIAL_SIXTH_EMOJI = "💛";
     const STAR_EMOJI = "🌟";
@@ -193,8 +234,10 @@
 
     const leaderboardEl = document.getElementById("leaderboard");
     const statusEl = document.getElementById("status");
+    const adminForm = document.getElementById("adminForm");
 
     document.addEventListener("DOMContentLoaded", loadLeaderboard);
+    adminForm.addEventListener("submit", sendUpdate);
 
     async function loadLeaderboard() {
       try {
@@ -206,7 +249,8 @@
         statusEl.textContent = "Loading leaderboard...";
         leaderboardEl.innerHTML = "";
 
-        const response = await fetch(CSV_URL + "&cachebust=" + Date.now());
+        const separator = CSV_URL.includes("?") ? "&" : "?";
+        const response = await fetch(CSV_URL + separator + "cachebust=" + Date.now());
 
         if (!response.ok) {
           throw new Error("Could not load the Google Sheet CSV.");
@@ -225,6 +269,47 @@
         statusEl.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
       } catch (error) {
         showError(error.message);
+      }
+    }
+
+    async function sendUpdate(event) {
+      event.preventDefault();
+
+      if (!WEB_APP_URL || WEB_APP_URL.includes("PASTE_YOUR")) {
+        showError("Add your Apps Script Web App URL inside the WEB_APP_URL variable.");
+        return;
+      }
+
+      const name = document.getElementById("studentName").value.trim();
+      const change = Number(document.getElementById("heartChange").value);
+      const pin = document.getElementById("teacherPin").value;
+
+      if (!name || Number.isNaN(change)) {
+        showError("Enter a valid student name and score change.");
+        return;
+      }
+
+      statusEl.textContent = "Sending update...";
+
+      const formData = new URLSearchParams();
+      formData.append("student", name);
+      formData.append("change", String(change));
+      formData.append("pin", pin);
+
+      try {
+        await fetch(WEB_APP_URL, {
+          method: "POST",
+          mode: "no-cors",
+          body: formData
+        });
+
+        statusEl.textContent = "Update sent. Refreshing...";
+        document.getElementById("studentName").value = "";
+        document.getElementById("heartChange").value = "1";
+
+        setTimeout(loadLeaderboard, 1500);
+      } catch (error) {
+        showError("The update could not be sent.");
       }
     }
 
@@ -278,7 +363,9 @@
         } else if (char === "," && !insideQuotes) {
           currentRow.push(currentValue.trim());
           currentValue = "";
-        } else if ((char === "\n" || char === "\r") && !insideQuotes) {
+        } else if ((char === "
+" || char === "
+") && !insideQuotes) {
           if (currentValue || currentRow.length) {
             currentRow.push(currentValue.trim());
             rows.push(currentRow);
@@ -286,7 +373,9 @@
             currentValue = "";
           }
 
-          if (char === "\r" && nextChar === "\n") i++;
+          if (char === "
+" && nextChar === "
+") i++;
         } else {
           currentValue += char;
         }
