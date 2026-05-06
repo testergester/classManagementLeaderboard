@@ -17,7 +17,6 @@
       --gold: #f59e0b;
       --silver: #9ca3af;
       --bronze: #b45309;
-      --overlay: rgba(15, 23, 42, 0.55);
       --success: #059669;
       --warning: #d97706;
     }
@@ -59,7 +58,7 @@
       justify-content: space-between;
       align-items: center;
       gap: 12px;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
       flex-wrap: wrap;
     }
 
@@ -106,12 +105,38 @@
       color: var(--text);
     }
 
+    button.success {
+      background: var(--success);
+    }
+
     button.danger {
       background: var(--danger);
     }
 
-    button.success {
-      background: var(--success);
+    .add-panel {
+      display: none;
+      grid-template-columns: 1fr 110px auto;
+      gap: 8px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 12px;
+      margin-bottom: 16px;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+    }
+
+    .add-panel.show {
+      display: grid;
+    }
+
+    input {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 1rem;
+      background: white;
+      color: var(--text);
     }
 
     .leaderboard {
@@ -175,19 +200,30 @@
       font-size: 0.9rem;
     }
 
-    .reward-button {
-      background: transparent;
-      color: inherit;
-      padding: 6px 8px;
-      font-size: 1.5rem;
+    .reward-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
       white-space: nowrap;
-      border-radius: 12px;
-      min-width: 48px;
     }
 
-    .reward-button:hover {
-      background: #eef2ff;
-      opacity: 1;
+    .round-button {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      line-height: 1;
+    }
+
+    .emoji-display {
+      min-width: 52px;
+      text-align: center;
+      font-size: 1.5rem;
+      padding: 4px 2px;
     }
 
     .empty-state,
@@ -206,104 +242,23 @@
       color: #991b1b;
     }
 
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: var(--overlay);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-      z-index: 10;
-    }
-
-    .modal-overlay.show {
-      display: flex;
-    }
-
-    .modal {
-      width: 100%;
-      max-width: 430px;
-      background: var(--card);
-      border-radius: 18px;
-      padding: 20px;
-      box-shadow: 0 20px 45px rgba(15, 23, 42, 0.22);
-    }
-
-    .modal h2 {
-      margin: 0 0 6px;
-      font-size: 1.35rem;
-    }
-
-    .modal p {
-      margin: 0 0 16px;
-      color: var(--muted);
-    }
-
-    .field {
-      margin-bottom: 12px;
-    }
-
-    .field.hidden {
-      display: none;
-    }
-
-    .field label {
-      display: block;
-      margin-bottom: 6px;
-      font-weight: bold;
-      font-size: 0.95rem;
-    }
-
-    input {
-      width: 100%;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px;
-      font-size: 1rem;
-      background: white;
-      color: var(--text);
-    }
-
-    .quick-actions {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-
-    .modal-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      margin-top: 16px;
-    }
-
-    @media (max-width: 600px) {
+    @media (max-width: 650px) {
       .controls {
         align-items: flex-start;
+      }
+
+      .add-panel {
+        grid-template-columns: 1fr;
       }
 
       .student-card {
         grid-template-columns: 48px 1fr;
       }
 
-      .reward-button {
+      .reward-control {
         grid-column: 1 / -1;
-        justify-self: start;
+        justify-content: flex-start;
         margin-left: 56px;
-      }
-
-      .quick-actions {
-        grid-template-columns: repeat(2, 1fr);
-      }
-
-      .modal-actions {
-        flex-direction: column-reverse;
-      }
-
-      .modal-actions button {
-        width: 100%;
       }
     }
   </style>
@@ -312,53 +267,25 @@
   <main class="page">
     <section class="header">
       <h1>Class Leaderboard</h1>
-      <p>Click a student’s reward emojis to update their hearts.</p>
+      <p>Use minus and plus to update hearts.</p>
     </section>
 
     <section class="controls">
       <div id="status" class="status">Loading leaderboard...</div>
       <div class="button-row">
-        <button class="success" onclick="openAddStudent()">Add student</button>
+        <button class="success" onclick="toggleAddPanel()">Add student</button>
         <button onclick="loadLeaderboard()">Refresh</button>
       </div>
     </section>
 
+    <form id="addPanel" class="add-panel">
+      <input id="newStudentName" type="text" placeholder="Student name" autocomplete="off" />
+      <input id="newStudentHearts" type="number" min="0" step="1" value="0" />
+      <button type="submit">Add</button>
+    </form>
+
     <section id="leaderboard" class="leaderboard"></section>
   </main>
-
-  <section id="editorOverlay" class="modal-overlay" onclick="closeEditorFromOverlay(event)">
-    <form id="editorForm" class="modal">
-      <h2 id="editorTitle">Update student</h2>
-      <p id="editorSubtitle">Set the new heart total.</p>
-
-      <div id="studentNameField" class="field hidden">
-        <label for="studentNameInput">Student name</label>
-        <input id="studentNameInput" type="text" autocomplete="off" />
-      </div>
-
-      <div class="quick-actions">
-        <button type="button" class="secondary" onclick="changeEditorHearts(-1)">-1</button>
-        <button type="button" class="secondary" onclick="changeEditorHearts(1)">+1</button>
-        <button type="button" class="secondary" onclick="changeEditorHearts(2)">+2</button>
-        <button type="button" class="danger" onclick="setEditorHearts(0)">Reset</button>
-      </div>
-
-      <div class="field">
-        <label for="heartTotal">Heart total</label>
-        <input id="heartTotal" type="number" min="0" step="1" required />
-      </div>
-
-      <div class="field">
-        <label for="teacherPin">Teacher PIN</label>
-        <input id="teacherPin" type="password" autocomplete="current-password" required />
-      </div>
-
-      <div class="modal-actions">
-        <button type="button" class="secondary" onclick="closeEditor()">Cancel</button>
-        <button type="submit">Save</button>
-      </div>
-    </form>
-  </section>
 
   <script>
     /*
@@ -378,22 +305,15 @@
 
     const leaderboardEl = document.getElementById("leaderboard");
     const statusEl = document.getElementById("status");
-    const editorOverlay = document.getElementById("editorOverlay");
-    const editorForm = document.getElementById("editorForm");
-    const editorTitle = document.getElementById("editorTitle");
-    const editorSubtitle = document.getElementById("editorSubtitle");
-    const studentNameField = document.getElementById("studentNameField");
-    const studentNameInput = document.getElementById("studentNameInput");
-    const heartTotalInput = document.getElementById("heartTotal");
-    const teacherPinInput = document.getElementById("teacherPin");
+    const addPanel = document.getElementById("addPanel");
+    const newStudentNameInput = document.getElementById("newStudentName");
+    const newStudentHeartsInput = document.getElementById("newStudentHearts");
 
-    let selectedStudent = null;
-    let editorMode = "update";
     let studentsCache = [];
     let saveQueue = Promise.resolve();
 
     document.addEventListener("DOMContentLoaded", loadLeaderboard);
-    editorForm.addEventListener("submit", saveStudentUpdate);
+    addPanel.addEventListener("submit", addStudent);
 
     async function loadLeaderboard() {
       try {
@@ -416,20 +336,20 @@
           .filter(student => student.name && !Number.isNaN(student.hearts));
 
         sortStudents();
-        renderLeaderboard(studentsCache);
+        renderLeaderboard();
         setStatus(`Updated: ${new Date().toLocaleTimeString()}`, "success");
       } catch (error) {
         showError(error.message);
       }
     }
 
-    function renderLeaderboard(students) {
-      if (students.length === 0) {
+    function renderLeaderboard() {
+      if (studentsCache.length === 0) {
         leaderboardEl.innerHTML = `<div class="empty-state">No students yet. Use Add student to start the leaderboard.</div>`;
         return;
       }
 
-      leaderboardEl.innerHTML = students.map((student, index) => {
+      leaderboardEl.innerHTML = studentsCache.map((student, index) => {
         const rank = index + 1;
         const rankClass = rank === 1 ? "first" : rank === 2 ? "second" : rank === 3 ? "third" : "";
         const safeName = escapeHTML(student.name);
@@ -442,116 +362,81 @@
               <div class="student-name">${safeName}</div>
               <div class="score-line">${escapeHTML(pendingText)}</div>
             </div>
-            <button class="reward-button" type="button" title="Update ${safeName}" onclick="openEditorByIndex(${index})">
-              ${makeReward(student.hearts) || "＋"}
-            </button>
+            <div class="reward-control" aria-label="Update ${safeName}">
+              <button class="round-button danger" type="button" title="Remove one heart" onclick="changeStudentHearts(${index}, -1)">−</button>
+              <span class="emoji-display">${makeReward(student.hearts) || "0"}</span>
+              <button class="round-button success" type="button" title="Add one heart" onclick="changeStudentHearts(${index}, 1)">+</button>
+            </div>
           </article>
         `;
       }).join("");
     }
 
-    function openEditorByIndex(index) {
-      const student = studentsCache[index];
-      if (!student) return;
-      openUpdateStudent(student.name, student.hearts);
-    }
-
-    function openUpdateStudent(studentName, hearts) {
-      editorMode = "update";
-      selectedStudent = studentName;
-      editorTitle.textContent = studentName;
-      editorSubtitle.textContent = "Set the new heart total for this student.";
-      studentNameField.classList.add("hidden");
-      studentNameInput.removeAttribute("required");
-      studentNameInput.value = studentName;
-      heartTotalInput.value = Math.max(0, Math.floor(Number(hearts) || 0));
-      openEditorModal(heartTotalInput);
-    }
-
-    function openAddStudent() {
-      editorMode = "add";
-      selectedStudent = null;
-      editorTitle.textContent = "Add student";
-      editorSubtitle.textContent = "Add a new student to the leaderboard.";
-      studentNameField.classList.remove("hidden");
-      studentNameInput.setAttribute("required", "required");
-      studentNameInput.value = "";
-      heartTotalInput.value = 0;
-      openEditorModal(studentNameInput);
-    }
-
-    function openEditorModal(focusElement) {
-      editorOverlay.classList.add("show");
-      setTimeout(() => {
-        focusElement.focus();
-        focusElement.select();
-      }, 0);
-    }
-
-    function closeEditor() {
-      selectedStudent = null;
-      editorOverlay.classList.remove("show");
-    }
-
-    function closeEditorFromOverlay(event) {
-      if (event.target === editorOverlay) {
-        closeEditor();
+    function toggleAddPanel() {
+      addPanel.classList.toggle("show");
+      if (addPanel.classList.contains("show")) {
+        newStudentNameInput.focus();
       }
     }
 
-    function changeEditorHearts(change) {
-      const current = Number(heartTotalInput.value) || 0;
-      heartTotalInput.value = Math.max(0, current + change);
-    }
-
-    function setEditorHearts(value) {
-      heartTotalInput.value = Math.max(0, Number(value) || 0);
-    }
-
-    async function saveStudentUpdate(event) {
+    function addStudent(event) {
       event.preventDefault();
 
       try {
         validateWebAppUrl();
 
-        const pin = teacherPinInput.value;
-        const hearts = Math.max(0, Math.floor(Number(heartTotalInput.value) || 0));
-        const studentName = editorMode === "add"
-          ? studentNameInput.value.trim()
-          : String(selectedStudent || "").trim();
+        const name = newStudentNameInput.value.trim();
+        const hearts = Math.max(0, Math.floor(Number(newStudentHeartsInput.value) || 0));
 
-        if (!studentName) {
+        if (!name) {
           throw new Error("Enter the student name.");
         }
 
-        if (!pin) {
-          throw new Error("Enter the teacher PIN.");
-        }
-
-        if (editorMode === "add" && findStudent(studentName)) {
-          throw new Error("This student already exists. Click the student’s emojis to update them instead.");
+        if (findStudent(name)) {
+          throw new Error("This student already exists.");
         }
 
         const previousCache = cloneStudents(studentsCache);
 
-        upsertLocalStudent(studentName, hearts, true);
-        closeEditor();
-        renderLeaderboard(studentsCache);
-        setStatus("Saved on screen. Sending to Google Sheets...", "warning");
+        upsertLocalStudent(name, hearts, true);
+        renderLeaderboard();
+        setStatus("Student added on screen. Sending to Google Sheets...", "warning");
 
-        saveQueue = saveQueue.then(() => sendStudentToSheet(studentName, hearts, pin, previousCache));
+        newStudentNameInput.value = "";
+        newStudentHeartsInput.value = 0;
+
+        saveQueue = saveQueue.then(() => sendStudentToSheet(name, hearts, previousCache));
       } catch (error) {
         showSoftError(error.message);
       }
     }
 
-    async function sendStudentToSheet(studentName, hearts, pin, previousCache) {
+    function changeStudentHearts(index, change) {
+      try {
+        validateWebAppUrl();
+
+        const student = studentsCache[index];
+        if (!student) return;
+
+        const previousCache = cloneStudents(studentsCache);
+        const newHearts = Math.max(0, Math.floor(Number(student.hearts) || 0) + change);
+
+        upsertLocalStudent(student.name, newHearts, true);
+        renderLeaderboard();
+        setStatus("Updated on screen. Sending to Google Sheets...", "warning");
+
+        saveQueue = saveQueue.then(() => sendStudentToSheet(student.name, newHearts, previousCache));
+      } catch (error) {
+        showSoftError(error.message);
+      }
+    }
+
+    async function sendStudentToSheet(studentName, hearts, previousCache) {
       try {
         const data = await appsScriptRequest({
           action: "set",
           student: studentName,
-          hearts: String(hearts),
-          pin: pin
+          hearts: String(hearts)
         });
 
         if (!data.success) {
@@ -559,11 +444,11 @@
         }
 
         markStudentSaved(studentName);
-        renderLeaderboard(studentsCache);
+        renderLeaderboard();
         setStatus(`Saved to Google Sheets: ${studentName}`, "success");
       } catch (error) {
         studentsCache = previousCache;
-        renderLeaderboard(studentsCache);
+        renderLeaderboard();
         showSoftError(`Not saved. ${error.message}`);
       }
     }
