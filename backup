@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Class Leaderboard</title>
+
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --accent: #2563eb;
+      --danger: #dc2626;
+      --gold: #f59e0b;
+      --silver: #9ca3af;
+      --bronze: #b45309;
+      --success: #059669;
+      --warning: #d97706;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 32px 16px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 2rem;
+    }
+
+    .header p {
+      margin: 8px 0 0;
+      color: var(--muted);
+    }
+
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .status {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .status.success {
+      color: var(--success);
+    }
+
+    .status.warning {
+      color: var(--warning);
+    }
+
+    .status.error-text {
+      color: var(--danger);
+    }
+
+    button {
+      border: 0;
+      background: var(--accent);
+      color: white;
+      padding: 10px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 0.95rem;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    button.secondary {
+      background: #e5e7eb;
+      color: var(--text);
+    }
+
+    button.success {
+      background: var(--success);
+    }
+
+    button.danger {
+      background: var(--danger);
+    }
+
+    .add-panel {
+      display: none;
+      grid-template-columns: 1fr 110px auto;
+      gap: 8px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 12px;
+      margin-bottom: 16px;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+    }
+
+    .add-panel.show {
+      display: grid;
+    }
+
+    input {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 1rem;
+      background: white;
+      color: var(--text);
+    }
+
+    .leaderboard {
+      display: grid;
+      gap: 12px;
+    }
+
+    .student-card {
+      display: grid;
+      grid-template-columns: 56px 1fr auto;
+      align-items: center;
+      gap: 12px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px 16px;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .student-card:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+    }
+
+    .rank {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #eef2ff;
+      font-weight: bold;
+      color: var(--accent);
+    }
+
+    .rank.first {
+      background: #fef3c7;
+      color: var(--gold);
+    }
+
+    .rank.second {
+      background: #f3f4f6;
+      color: var(--silver);
+    }
+
+    .rank.third {
+      background: #ffedd5;
+      color: var(--bronze);
+    }
+
+    .student-name {
+      font-size: 1.1rem;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    .score-line {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .reward-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .round-button {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      line-height: 1;
+    }
+
+    .emoji-display {
+      min-width: 52px;
+      text-align: center;
+      font-size: 1.5rem;
+      padding: 4px 2px;
+    }
+
+    .empty-state,
+    .error {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 18px;
+      border-radius: 16px;
+      text-align: center;
+    }
+
+    .error {
+      background: #fee2e2;
+      border-color: #fecaca;
+      color: #991b1b;
+    }
+
+    @media (max-width: 650px) {
+      .controls {
+        align-items: flex-start;
+      }
+
+      .add-panel {
+        grid-template-columns: 1fr;
+      }
+
+      .student-card {
+        grid-template-columns: 48px 1fr;
+      }
+
+      .reward-control {
+        grid-column: 1 / -1;
+        justify-content: flex-start;
+        margin-left: 56px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="header">
+      <h1>Class Leaderboard</h1>
+      <p>Use minus and plus to update hearts.</p>
+    </section>
+
+    <section class="controls">
+      <div id="status" class="status">Loading leaderboard...</div>
+      <div class="button-row">
+        <button class="success" onclick="toggleAddPanel()">Add student</button>
+        <button onclick="loadLeaderboard()">Refresh</button>
+      </div>
+    </section>
+
+    <form id="addPanel" class="add-panel">
+      <input id="newStudentName" type="text" placeholder="Student name" autocomplete="off" />
+      <input id="newStudentHearts" type="number" min="0" step="1" value="0" />
+      <button type="submit">Add</button>
+    </form>
+
+    <section id="leaderboard" class="leaderboard"></section>
+  </main>
+
+  <script>
+    /*
+      SETUP
+      1. Deploy the Google Apps Script backend as a Web App.
+      2. Paste the Web App URL below.
+      3. In Apps Script, paste your Google Sheet URL into SHEET_URL.
+      4. Your Google Sheet should have these headers:
+         Student | Hearts
+    */
+
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzLsmd7MqbtULT_wSvHADJoz0-sTX816t8IT2-HuNomppsWyVToEH7P7zmHo1Y2ZagE/exec";
+
+    const SPECIAL_SIXTH_EMOJI = "💛";
+    const STAR_EMOJI = "🌟";
+    const HEART_EMOJI = "❤️";
+
+    const leaderboardEl = document.getElementById("leaderboard");
+    const statusEl = document.getElementById("status");
+    const addPanel = document.getElementById("addPanel");
+    const newStudentNameInput = document.getElementById("newStudentName");
+    const newStudentHeartsInput = document.getElementById("newStudentHearts");
+
+    let studentsCache = [];
+    let saveQueue = Promise.resolve();
+
+    document.addEventListener("DOMContentLoaded", loadLeaderboard);
+    addPanel.addEventListener("submit", addStudent);
+
+    async function loadLeaderboard() {
+      try {
+        validateWebAppUrl();
+        setStatus("Loading leaderboard...");
+        leaderboardEl.innerHTML = "";
+
+        const data = await appsScriptRequest({ action: "list" });
+
+        if (!data.success) {
+          throw new Error(data.message || "Could not load leaderboard data.");
+        }
+
+        studentsCache = data.students
+          .map(student => ({
+            name: String(student.name || "Unnamed student").trim(),
+            hearts: Number(student.hearts || 0),
+            pending: false
+          }))
+          .filter(student => student.name && !Number.isNaN(student.hearts));
+
+        sortStudents();
+        renderLeaderboard();
+        setStatus(`Updated: ${new Date().toLocaleTimeString()}`, "success");
+      } catch (error) {
+        showError(error.message);
+      }
+    }
+
+    function renderLeaderboard() {
+      if (studentsCache.length === 0) {
+        leaderboardEl.innerHTML = `<div class="empty-state">No students yet. Use Add student to start the leaderboard.</div>`;
+        return;
+      }
+
+      leaderboardEl.innerHTML = studentsCache.map((student, index) => {
+        const rank = getCompetitionRank(index);
+        const rankClass = rank === 1 ? "first" : rank === 2 ? "second" : rank === 3 ? "third" : "";
+        const safeName = escapeHTML(student.name);
+        const pendingText = student.pending ? "Saving..." : `${student.hearts} hearts`;
+
+        return `
+          <article class="student-card">
+            <div class="rank ${rankClass}">${rank}</div>
+            <div>
+              <div class="student-name">${safeName}</div>
+              <div class="score-line">${escapeHTML(pendingText)}</div>
+            </div>
+            <div class="reward-control" aria-label="Update ${safeName}">
+              <button class="round-button danger" type="button" title="Remove one heart" onclick="changeStudentHearts(${index}, -1)">−</button>
+              <span class="emoji-display">${makeReward(student.hearts) || "0"}</span>
+              <button class="round-button success" type="button" title="Add one heart" onclick="changeStudentHearts(${index}, 1)">+</button>
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    function getCompetitionRank(index) {
+      if (index === 0) return 1;
+
+      const currentHearts = Number(studentsCache[index].hearts) || 0;
+
+      for (let i = index - 1; i >= 0; i--) {
+        const previousHearts = Number(studentsCache[i].hearts) || 0;
+
+        if (previousHearts !== currentHearts) {
+          return i + 2;
+        }
+      }
+
+      return 1;
+    }
+
+    function toggleAddPanel() {
+      addPanel.classList.toggle("show");
+      if (addPanel.classList.contains("show")) {
+        newStudentNameInput.focus();
+      }
+    }
+
+    function addStudent(event) {
+      event.preventDefault();
+
+      try {
+        validateWebAppUrl();
+
+        const name = newStudentNameInput.value.trim();
+        const hearts = Math.max(0, Math.floor(Number(newStudentHeartsInput.value) || 0));
+
+        if (!name) {
+          throw new Error("Enter the student name.");
+        }
+
+        if (findStudent(name)) {
+          throw new Error("This student already exists.");
+        }
+
+        const previousCache = cloneStudents(studentsCache);
+
+        upsertLocalStudent(name, hearts, true);
+        renderLeaderboard();
+        setStatus("Student added on screen. Sending to Google Sheets...", "warning");
+
+        newStudentNameInput.value = "";
+        newStudentHeartsInput.value = 0;
+
+        saveQueue = saveQueue.then(() => sendStudentToSheet(name, hearts, previousCache));
+      } catch (error) {
+        showSoftError(error.message);
+      }
+    }
+
+    function changeStudentHearts(index, change) {
+      try {
+        validateWebAppUrl();
+
+        const student = studentsCache[index];
+        if (!student) return;
+
+        const previousCache = cloneStudents(studentsCache);
+        const newHearts = Math.max(0, Math.floor(Number(student.hearts) || 0) + change);
+
+        upsertLocalStudent(student.name, newHearts, true);
+        renderLeaderboard();
+        setStatus("Updated on screen. Sending to Google Sheets...", "warning");
+
+        saveQueue = saveQueue.then(() => sendStudentToSheet(student.name, newHearts, previousCache));
+      } catch (error) {
+        showSoftError(error.message);
+      }
+    }
+
+    async function sendStudentToSheet(studentName, hearts, previousCache) {
+      try {
+        const data = await appsScriptRequest({
+          action: "set",
+          student: studentName,
+          hearts: String(hearts)
+        });
+
+        if (!data.success) {
+          throw new Error(data.message || "The update was rejected by Apps Script.");
+        }
+
+        markStudentSaved(studentName);
+        renderLeaderboard();
+        setStatus(`Saved to Google Sheets: ${studentName}`, "success");
+      } catch (error) {
+        studentsCache = previousCache;
+        renderLeaderboard();
+        showSoftError(`Not saved. ${error.message}`);
+      }
+    }
+
+    function appsScriptRequest(params) {
+      return new Promise((resolve, reject) => {
+        const callbackName = "leaderboardCallback_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
+        const script = document.createElement("script");
+        const url = new URL(WEB_APP_URL);
+
+        Object.keys(params).forEach(key => {
+          url.searchParams.set(key, params[key]);
+        });
+
+        url.searchParams.set("callback", callbackName);
+        url.searchParams.set("cachebust", Date.now());
+
+        const timeoutId = setTimeout(() => {
+          cleanup();
+          reject(new Error("Apps Script did not respond. Check the Web App URL and deployment permissions."));
+        }, 10000);
+
+        window[callbackName] = function(data) {
+          clearTimeout(timeoutId);
+          cleanup();
+          resolve(data);
+        };
+
+        script.onerror = function() {
+          clearTimeout(timeoutId);
+          cleanup();
+          reject(new Error("Could not connect to the Apps Script backend."));
+        };
+
+        function cleanup() {
+          delete window[callbackName];
+          script.remove();
+        }
+
+        script.src = url.toString();
+        document.body.appendChild(script);
+      });
+    }
+
+    function upsertLocalStudent(name, hearts, pending) {
+      const existing = findStudent(name);
+
+      if (existing) {
+        existing.name = name;
+        existing.hearts = hearts;
+        existing.pending = pending;
+      } else {
+        studentsCache.push({
+          name,
+          hearts,
+          pending
+        });
+      }
+
+      sortStudents();
+    }
+
+    function markStudentSaved(name) {
+      const student = findStudent(name);
+      if (student) student.pending = false;
+    }
+
+    function findStudent(name) {
+      const target = String(name || "").trim().toLowerCase();
+      return studentsCache.find(student => student.name.toLowerCase() === target);
+    }
+
+    function cloneStudents(students) {
+      return students.map(student => ({
+        name: student.name,
+        hearts: student.hearts,
+        pending: Boolean(student.pending)
+      }));
+    }
+
+    function sortStudents() {
+      studentsCache.sort((a, b) => b.hearts - a.hearts || a.name.localeCompare(b.name));
+    }
+
+    function makeReward(score) {
+      const safeScore = Math.max(0, Math.floor(Number(score) || 0));
+      const hearts = HEART_EMOJI.repeat(Math.min(safeScore, 5));
+      const sixth = safeScore >= 6 ? SPECIAL_SIXTH_EMOJI : "";
+      const stars = safeScore >= 7 ? STAR_EMOJI.repeat(safeScore - 6) : "";
+
+      return hearts + sixth + stars;
+    }
+
+    function validateWebAppUrl() {
+      if (!WEB_APP_URL || WEB_APP_URL.includes("PASTE_YOUR")) {
+        throw new Error("Add your Apps Script Web App URL inside the WEB_APP_URL variable.");
+      }
+    }
+
+    function setStatus(message, type = "") {
+      statusEl.className = "status";
+      if (type) statusEl.classList.add(type);
+      statusEl.textContent = message;
+    }
+
+    function showError(message) {
+      setStatus("Error", "error-text");
+      leaderboardEl.innerHTML = `<div class="error">${escapeHTML(message)}</div>`;
+    }
+
+    function showSoftError(message) {
+      setStatus(message, "error-text");
+    }
+
+    function escapeHTML(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>
