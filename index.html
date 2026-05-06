@@ -17,6 +17,7 @@
       --gold: #f59e0b;
       --silver: #9ca3af;
       --bronze: #b45309;
+      --overlay: rgba(15, 23, 42, 0.55);
     }
 
     * {
@@ -31,7 +32,7 @@
     }
 
     .page {
-      max-width: 960px;
+      max-width: 900px;
       margin: 0 auto;
       padding: 32px 16px;
     }
@@ -51,38 +52,13 @@
       color: var(--muted);
     }
 
-    .panel {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 16px;
-      margin-bottom: 16px;
-      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
-    }
-
     .controls {
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 12px;
+      margin-bottom: 16px;
       flex-wrap: wrap;
-    }
-
-    .admin-form {
-      display: grid;
-      grid-template-columns: 1fr 110px 120px 110px;
-      gap: 10px;
-      margin-top: 14px;
-    }
-
-    input {
-      width: 100%;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px;
-      font-size: 1rem;
-      background: white;
-      color: var(--text);
     }
 
     .status {
@@ -98,13 +74,19 @@
       border-radius: 10px;
       cursor: pointer;
       font-weight: bold;
+      font-size: 0.95rem;
     }
 
     button:hover {
       opacity: 0.9;
     }
 
-    .danger {
+    button.secondary {
+      background: #e5e7eb;
+      color: var(--text);
+    }
+
+    button.danger {
       background: var(--danger);
     }
 
@@ -163,9 +145,18 @@
       font-size: 0.9rem;
     }
 
-    .reward {
+    .reward-button {
+      background: transparent;
+      color: inherit;
+      padding: 6px 8px;
       font-size: 1.5rem;
       white-space: nowrap;
+      border-radius: 12px;
+    }
+
+    .reward-button:hover {
+      background: #eef2ff;
+      opacity: 1;
     }
 
     .error {
@@ -176,18 +167,88 @@
       border-radius: 12px;
     }
 
-    @media (max-width: 700px) {
-      .admin-form {
-        grid-template-columns: 1fr;
-      }
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--overlay);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 10;
+    }
 
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal {
+      width: 100%;
+      max-width: 420px;
+      background: var(--card);
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 20px 45px rgba(15, 23, 42, 0.22);
+    }
+
+    .modal h2 {
+      margin: 0 0 6px;
+      font-size: 1.35rem;
+    }
+
+    .modal p {
+      margin: 0 0 16px;
+      color: var(--muted);
+    }
+
+    .field {
+      margin-bottom: 12px;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: bold;
+      font-size: 0.95rem;
+    }
+
+    input {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 1rem;
+      background: white;
+      color: var(--text);
+    }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    @media (max-width: 600px) {
       .student-card {
         grid-template-columns: 48px 1fr;
       }
 
-      .reward {
+      .reward-button {
         grid-column: 1 / -1;
-        padding-left: 60px;
+        justify-self: start;
+        margin-left: 56px;
+      }
+
+      .quick-actions {
+        grid-template-columns: repeat(2, 1fr);
       }
     }
   </style>
@@ -196,37 +257,57 @@
   <main class="page">
     <section class="header">
       <h1>Class Leaderboard</h1>
-      <p>Read and update hearts from Google Sheets.</p>
+      <p>Click a student’s reward emojis to update their hearts.</p>
     </section>
 
-    <section class="panel">
-      <div class="controls">
-        <div id="status" class="status">Loading leaderboard...</div>
-        <button onclick="loadLeaderboard()">Refresh</button>
-      </div>
-
-      <form id="adminForm" class="admin-form">
-        <input id="studentName" type="text" placeholder="Student name" required />
-        <input id="heartChange" type="number" placeholder="+1 / -1" value="1" required />
-        <input id="teacherPin" type="password" placeholder="Teacher PIN" required />
-        <button type="submit">Update</button>
-      </form>
+    <section class="controls">
+      <div id="status" class="status">Loading leaderboard...</div>
+      <button onclick="loadLeaderboard()">Refresh</button>
     </section>
 
     <section id="leaderboard" class="leaderboard"></section>
   </main>
 
+  <section id="editorOverlay" class="modal-overlay" onclick="closeEditorFromOverlay(event)">
+    <form id="editorForm" class="modal">
+      <h2 id="editorTitle">Update student</h2>
+      <p id="editorSubtitle">Set the new heart total.</p>
+
+      <div class="quick-actions">
+        <button type="button" class="secondary" onclick="changeEditorHearts(-1)">-1</button>
+        <button type="button" class="secondary" onclick="changeEditorHearts(1)">+1</button>
+        <button type="button" class="secondary" onclick="changeEditorHearts(2)">+2</button>
+        <button type="button" class="danger" onclick="setEditorHearts(0)">Reset</button>
+      </div>
+
+      <div class="field">
+        <label for="heartTotal">Heart total</label>
+        <input id="heartTotal" type="number" min="0" step="1" required />
+      </div>
+
+      <div class="field">
+        <label for="teacherPin">Teacher PIN</label>
+        <input id="teacherPin" type="password" autocomplete="current-password" required />
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="secondary" onclick="closeEditor()">Cancel</button>
+        <button type="submit">Save</button>
+      </div>
+    </form>
+  </section>
+
   <script>
     /*
       SETUP
-      1. Publish your Google Sheet as CSV and paste the CSV link below.
-      2. Deploy the Apps Script backend as a Web App and paste its URL below.
-      3. Your Google Sheet should have these headers:
+      1. Deploy the Google Apps Script backend as a Web App.
+      2. Paste the Web App URL below.
+      3. In Apps Script, paste your Google Sheet URL into SHEET_URL.
+      4. Your Google Sheet should have these headers:
          Student | Hearts
     */
 
-    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ8jr7tiKDUBeJta25XXvF54mnMs6UOx84_0AEMKBtqMQ0rvsFcLtdul_f8990pySiBavrhxNkFj3K2/pub?gid=645769912&single=true&output=csv";
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzBUBCUCVxy0cujWv6XRkRcrARrg76QdNRm6FCYHbt3MqdSKQTNYhHZg7ts3wsqvY1v/exec";
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwgwa2stoM4DcqriI6qMS1X5p8HibPy2QGaNPupH6GUW0YHEfFcXzr65GFRhEulhpDx/exec";
 
     const SPECIAL_SIXTH_EMOJI = "💛";
     const STAR_EMOJI = "🌟";
@@ -234,82 +315,43 @@
 
     const leaderboardEl = document.getElementById("leaderboard");
     const statusEl = document.getElementById("status");
-    const adminForm = document.getElementById("adminForm");
+    const editorOverlay = document.getElementById("editorOverlay");
+    const editorForm = document.getElementById("editorForm");
+    const editorTitle = document.getElementById("editorTitle");
+    const editorSubtitle = document.getElementById("editorSubtitle");
+    const heartTotalInput = document.getElementById("heartTotal");
+    const teacherPinInput = document.getElementById("teacherPin");
+
+    let selectedStudent = null;
+    let studentsCache = [];
 
     document.addEventListener("DOMContentLoaded", loadLeaderboard);
-    adminForm.addEventListener("submit", sendUpdate);
+    editorForm.addEventListener("submit", saveStudentUpdate);
 
     async function loadLeaderboard() {
       try {
-        if (!CSV_URL || CSV_URL.includes("PASTE_YOUR")) {
-          showError("Add your published Google Sheets CSV link inside the CSV_URL variable.");
-          return;
-        }
-
+        validateWebAppUrl();
         statusEl.textContent = "Loading leaderboard...";
         leaderboardEl.innerHTML = "";
 
-        const separator = CSV_URL.includes("?") ? "&" : "?";
-        const response = await fetch(CSV_URL + separator + "cachebust=" + Date.now());
+        const data = await appsScriptRequest({ action: "list" });
 
-        if (!response.ok) {
-          throw new Error("Could not load the Google Sheet CSV.");
+        if (!data.success) {
+          throw new Error(data.message || "Could not load leaderboard data.");
         }
 
-        const csvText = await response.text();
-        const students = parseCSV(csvText)
-          .map(row => ({
-            name: row.Student || row.student || row.Name || row.name || "Unnamed student",
-            hearts: Number(row.Hearts || row.hearts || row.Score || row.score || 0)
+        studentsCache = data.students
+          .map(student => ({
+            name: String(student.name || "Unnamed student"),
+            hearts: Number(student.hearts || 0)
           }))
           .filter(student => student.name && !Number.isNaN(student.hearts))
           .sort((a, b) => b.hearts - a.hearts || a.name.localeCompare(b.name));
 
-        renderLeaderboard(students);
+        renderLeaderboard(studentsCache);
         statusEl.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
       } catch (error) {
         showError(error.message);
-      }
-    }
-
-    async function sendUpdate(event) {
-      event.preventDefault();
-
-      if (!WEB_APP_URL || WEB_APP_URL.includes("PASTE_YOUR")) {
-        showError("Add your Apps Script Web App URL inside the WEB_APP_URL variable.");
-        return;
-      }
-
-      const name = document.getElementById("studentName").value.trim();
-      const change = Number(document.getElementById("heartChange").value);
-      const pin = document.getElementById("teacherPin").value;
-
-      if (!name || Number.isNaN(change)) {
-        showError("Enter a valid student name and score change.");
-        return;
-      }
-
-      statusEl.textContent = "Sending update...";
-
-      const formData = new URLSearchParams();
-      formData.append("student", name);
-      formData.append("change", String(change));
-      formData.append("pin", pin);
-
-      try {
-        await fetch(WEB_APP_URL, {
-          method: "POST",
-          mode: "no-cors",
-          body: formData
-        });
-
-        statusEl.textContent = "Update sent. Refreshing...";
-        document.getElementById("studentName").value = "";
-        document.getElementById("heartChange").value = "1";
-
-        setTimeout(loadLeaderboard, 1500);
-      } catch (error) {
-        showError("The update could not be sent.");
       }
     }
 
@@ -322,18 +364,150 @@
       leaderboardEl.innerHTML = students.map((student, index) => {
         const rank = index + 1;
         const rankClass = rank === 1 ? "first" : rank === 2 ? "second" : rank === 3 ? "third" : "";
+        const safeName = escapeHTML(student.name);
 
         return `
           <article class="student-card">
             <div class="rank ${rankClass}">${rank}</div>
             <div>
-              <div class="student-name">${escapeHTML(student.name)}</div>
+              <div class="student-name">${safeName}</div>
               <div class="score-line">${student.hearts} hearts</div>
             </div>
-            <div class="reward">${makeReward(student.hearts)}</div>
+            <button class="reward-button" type="button" title="Update ${safeName}" onclick="openEditorByIndex(${index})">
+              ${makeReward(student.hearts) || "＋"}
+            </button>
           </article>
         `;
       }).join("");
+    }
+
+    function openEditorByIndex(index) {
+      const student = studentsCache[index];
+      if (!student) return;
+      openEditor(student.name, student.hearts);
+    }
+
+    function openEditor(studentName, hearts) {
+      selectedStudent = studentName;
+      editorTitle.textContent = studentName;
+      editorSubtitle.textContent = "Set the new heart total for this student.";
+      heartTotalInput.value = Math.max(0, Math.floor(Number(hearts) || 0));
+      editorOverlay.classList.add("show");
+      heartTotalInput.focus();
+      heartTotalInput.select();
+    }
+
+    function closeEditor() {
+      selectedStudent = null;
+      editorOverlay.classList.remove("show");
+    }
+
+    function closeEditorFromOverlay(event) {
+      if (event.target === editorOverlay) {
+        closeEditor();
+      }
+    }
+
+    function changeEditorHearts(change) {
+      const current = Number(heartTotalInput.value) || 0;
+      heartTotalInput.value = Math.max(0, current + change);
+    }
+
+    function setEditorHearts(value) {
+      heartTotalInput.value = Math.max(0, Number(value) || 0);
+    }
+
+    async function saveStudentUpdate(event) {
+      event.preventDefault();
+
+      try {
+        validateWebAppUrl();
+
+        if (!selectedStudent) {
+          throw new Error("No student selected.");
+        }
+
+        const hearts = Math.max(0, Math.floor(Number(heartTotalInput.value) || 0));
+        const pin = teacherPinInput.value;
+
+        if (!pin) {
+          throw new Error("Enter the teacher PIN.");
+        }
+
+        statusEl.textContent = "Saving update...";
+
+        const data = await appsScriptRequest({
+          action: "set",
+          student: selectedStudent,
+          hearts: String(hearts),
+          pin: pin
+        });
+
+        if (!data.success) {
+          throw new Error(data.message || "The update was rejected by Apps Script.");
+        }
+
+        updateLocalStudent(selectedStudent, hearts);
+        closeEditor();
+        renderLeaderboard(studentsCache);
+        statusEl.textContent = "Saved. Reloading from Google Sheet...";
+
+        setTimeout(loadLeaderboard, 500);
+      } catch (error) {
+        showError(error.message);
+      }
+    }
+
+    function appsScriptRequest(params) {
+      return new Promise((resolve, reject) => {
+        const callbackName = "leaderboardCallback_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
+        const script = document.createElement("script");
+        const url = new URL(WEB_APP_URL);
+
+        Object.keys(params).forEach(key => {
+          url.searchParams.set(key, params[key]);
+        });
+
+        url.searchParams.set("callback", callbackName);
+        url.searchParams.set("cachebust", Date.now());
+
+        const timeoutId = setTimeout(() => {
+          cleanup();
+          reject(new Error("Apps Script did not respond. Check the Web App URL and deployment permissions."));
+        }, 10000);
+
+        window[callbackName] = function(data) {
+          clearTimeout(timeoutId);
+          cleanup();
+          resolve(data);
+        };
+
+        script.onerror = function() {
+          clearTimeout(timeoutId);
+          cleanup();
+          reject(new Error("Could not connect to the Apps Script backend."));
+        };
+
+        function cleanup() {
+          delete window[callbackName];
+          script.remove();
+        }
+
+        script.src = url.toString();
+        document.body.appendChild(script);
+      });
+    }
+
+    function updateLocalStudent(name, hearts) {
+      const existing = studentsCache.find(student => student.name.toLowerCase() === name.toLowerCase());
+
+      if (existing) {
+        existing.hearts = hearts;
+      } else {
+        studentsCache.push({ name, hearts });
+      }
+
+      studentsCache.sort((a, b) => b.hearts - a.hearts || a.name.localeCompare(b.name));
     }
 
     function makeReward(score) {
@@ -345,57 +519,10 @@
       return hearts + sixth + stars;
     }
 
-    function parseCSV(csvText) {
-      const rows = [];
-      let currentRow = [];
-      let currentValue = "";
-      let insideQuotes = false;
-
-      for (let i = 0; i < csvText.length; i++) {
-        const char = csvText[i];
-        const nextChar = csvText[i + 1];
-
-        if (char === '"' && insideQuotes && nextChar === '"') {
-          currentValue += '"';
-          i++;
-        } else if (char === '"') {
-          insideQuotes = !insideQuotes;
-        } else if (char === "," && !insideQuotes) {
-          currentRow.push(currentValue.trim());
-          currentValue = "";
-        } else if ((char === "
-" || char === "
-") && !insideQuotes) {
-          if (currentValue || currentRow.length) {
-            currentRow.push(currentValue.trim());
-            rows.push(currentRow);
-            currentRow = [];
-            currentValue = "";
-          }
-
-          if (char === "
-" && nextChar === "
-") i++;
-        } else {
-          currentValue += char;
-        }
+    function validateWebAppUrl() {
+      if (!WEB_APP_URL || WEB_APP_URL.includes("PASTE_YOUR")) {
+        throw new Error("Add your Apps Script Web App URL inside the WEB_APP_URL variable.");
       }
-
-      if (currentValue || currentRow.length) {
-        currentRow.push(currentValue.trim());
-        rows.push(currentRow);
-      }
-
-      const headers = rows.shift();
-      if (!headers) return [];
-
-      return rows.map(row => {
-        const object = {};
-        headers.forEach((header, index) => {
-          object[header] = row[index] || "";
-        });
-        return object;
-      });
     }
 
     function showError(message) {
