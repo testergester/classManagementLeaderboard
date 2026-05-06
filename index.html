@@ -137,20 +137,15 @@
       border-radius: 10px;
       padding: 10px;
       font-size: 1rem;
+      font-family: Arial, sans-serif;
       background: white;
       color: var(--text);
-      font-family: Arial, sans-serif;
     }
 
     textarea {
-      min-height: 110px;
+      min-height: 120px;
       resize: vertical;
       line-height: 1.45;
-    }
-
-    textarea[readonly] {
-      background: #f9fafb;
-      color: var(--muted);
     }
 
     .leaderboard {
@@ -203,18 +198,18 @@
       color: var(--bronze);
     }
 
-    .student-name-button {
+    .name-button {
+      display: inline-block;
+      padding: 0;
       background: transparent;
       color: var(--text);
-      padding: 0;
-      border-radius: 0;
       font-size: 1.1rem;
       font-weight: bold;
       text-align: left;
-      cursor: pointer;
+      border-radius: 6px;
     }
 
-    .student-name-button:hover {
+    .name-button:hover {
       color: var(--accent);
       opacity: 1;
       text-decoration: underline;
@@ -283,64 +278,111 @@
       display: flex;
     }
 
-    .modal {
+    .comment-modal {
       width: 100%;
       max-width: 560px;
+      max-height: 90vh;
+      overflow-y: auto;
       background: var(--card);
       border-radius: 18px;
       padding: 20px;
       box-shadow: 0 20px 45px rgba(15, 23, 42, 0.22);
     }
 
-    .modal h2 {
-      margin: 0 0 6px;
-      font-size: 1.35rem;
-    }
-
-    .modal p {
-      margin: 0 0 16px;
-      color: var(--muted);
-    }
-
-    .field {
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
       margin-bottom: 14px;
     }
 
-    .field label {
-      display: block;
-      margin-bottom: 6px;
-      font-weight: bold;
-      font-size: 0.95rem;
+    .modal-head h2 {
+      margin: 0 0 4px;
+      font-size: 1.35rem;
     }
 
-    .comment-status {
-      min-height: 20px;
-      margin-top: -4px;
-      margin-bottom: 10px;
-      font-size: 0.92rem;
+    .modal-head p {
+      margin: 0;
       color: var(--muted);
     }
 
-    .comment-status.success {
-      color: var(--success);
+    .close-button {
+      background: #e5e7eb;
+      color: var(--text);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      padding: 0;
+      flex: 0 0 auto;
     }
 
-    .comment-status.error-text {
-      color: var(--danger);
+    .comment-browser {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px;
+      background: #f9fafb;
     }
 
-    .modal-actions {
+    .comment-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .comment-count {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .comment-content {
+      min-height: 120px;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      line-height: 1.5;
+    }
+
+    .comment-empty {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .comment-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .comment-panel {
+      display: none;
+      margin-top: 14px;
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+    }
+
+    .comment-panel.show {
+      display: block;
+    }
+
+    .comment-panel label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    .panel-actions {
       display: flex;
       justify-content: flex-end;
-      gap: 10px;
-      margin-top: 16px;
+      gap: 8px;
+      margin-top: 10px;
     }
 
     @media (max-width: 650px) {
-      .controls {
-        align-items: flex-start;
-      }
-
       .add-panel {
         grid-template-columns: 1fr;
       }
@@ -355,11 +397,13 @@
         margin-left: 56px;
       }
 
-      .modal-actions {
-        flex-direction: column-reverse;
+      .comment-actions,
+      .panel-actions {
+        flex-direction: column;
       }
 
-      .modal-actions button {
+      .comment-actions button,
+      .panel-actions button {
         width: 100%;
       }
     }
@@ -369,7 +413,7 @@
   <main class="page">
     <section class="header">
       <h1>Class Leaderboard</h1>
-      <p>Use minus and plus to update hearts. Click a name to add comments.</p>
+      <p>Use minus and plus to update hearts. Click a name to view comments.</p>
     </section>
 
     <section class="controls">
@@ -390,40 +434,51 @@
   </main>
 
   <section id="commentOverlay" class="modal-overlay" onclick="closeCommentsFromOverlay(event)">
-    <form id="commentForm" class="modal">
-      <h2 id="commentTitle">Student comments</h2>
-      <p>Review the latest saved comment and add a new one.</p>
-
-      <div class="field">
-        <label for="lastCommentBox">Last comment</label>
-        <textarea id="lastCommentBox" readonly placeholder="No comments yet."></textarea>
+    <div class="comment-modal">
+      <div class="modal-head">
+        <div>
+          <h2 id="commentStudentName">Student comments</h2>
+          <p id="commentSubtitle">Latest comment shown first.</p>
+        </div>
+        <button class="close-button" type="button" onclick="closeComments()">×</button>
       </div>
 
-      <div class="field">
-        <label for="newCommentBox">New comment</label>
-        <textarea id="newCommentBox" placeholder="Write a new comment about this student..."></textarea>
+      <div class="comment-browser">
+        <div class="comment-toolbar">
+          <button class="secondary" type="button" onclick="showPreviousComment()">‹ Left</button>
+          <span id="commentCount" class="comment-count">No comments</span>
+          <button class="secondary" type="button" onclick="showNextComment()">Right ›</button>
+        </div>
+
+        <div id="commentContent" class="comment-content comment-empty">No comment yet.</div>
+
+        <div class="comment-actions">
+          <button class="success" type="button" onclick="openNewCommentPanel()">New comment</button>
+          <button type="button" onclick="openEditCommentPanel()">Edit this comment</button>
+        </div>
       </div>
 
-      <div id="commentStatus" class="comment-status"></div>
-
-      <div class="modal-actions">
-        <button type="button" class="secondary" onclick="closeComments()">Cancel</button>
-        <button type="submit">Save comment</button>
+      <div id="newCommentPanel" class="comment-panel">
+        <label for="newCommentText">New comment</label>
+        <textarea id="newCommentText" placeholder="Write a new comment..."></textarea>
+        <div class="panel-actions">
+          <button class="secondary" type="button" onclick="hideCommentPanels()">Cancel</button>
+          <button class="success" type="button" onclick="saveNewComment()">Save new comment</button>
+        </div>
       </div>
-    </form>
+
+      <div id="editCommentPanel" class="comment-panel">
+        <label for="editCommentText">Edit selected comment</label>
+        <textarea id="editCommentText" placeholder="Edit the selected comment..."></textarea>
+        <div class="panel-actions">
+          <button class="secondary" type="button" onclick="hideCommentPanels()">Cancel</button>
+          <button type="button" onclick="saveEditedComment()">Save edit</button>
+        </div>
+      </div>
+    </div>
   </section>
 
   <script>
-    /*
-      SETUP
-      1. Deploy the Google Apps Script backend as a Web App.
-      2. Paste the Web App URL below.
-      3. In Apps Script, paste your Google Sheet URL into SHEET_URL.
-      4. Your Google Sheet should have these headers:
-         Student | Hearts
-      5. Comments are saved from column C onward in the same student row.
-    */
-
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbybPlYkRLzBzjqydoyrUByQvzVHdw6AJHKj_yfB_GBdsRE4q3LULgjGQ1956w7piOwh/exec";
 
     const SPECIAL_SIXTH_EMOJI = "💛";
@@ -437,19 +492,23 @@
     const newStudentHeartsInput = document.getElementById("newStudentHearts");
 
     const commentOverlay = document.getElementById("commentOverlay");
-    const commentForm = document.getElementById("commentForm");
-    const commentTitle = document.getElementById("commentTitle");
-    const lastCommentBox = document.getElementById("lastCommentBox");
-    const newCommentBox = document.getElementById("newCommentBox");
-    const commentStatus = document.getElementById("commentStatus");
+    const commentStudentNameEl = document.getElementById("commentStudentName");
+    const commentSubtitle = document.getElementById("commentSubtitle");
+    const commentCountEl = document.getElementById("commentCount");
+    const commentContentEl = document.getElementById("commentContent");
+    const newCommentPanel = document.getElementById("newCommentPanel");
+    const editCommentPanel = document.getElementById("editCommentPanel");
+    const newCommentText = document.getElementById("newCommentText");
+    const editCommentText = document.getElementById("editCommentText");
 
     let studentsCache = [];
     let saveQueue = Promise.resolve();
-    let selectedCommentStudent = null;
+    let selectedCommentStudent = "";
+    let selectedComments = [];
+    let selectedCommentIndex = -1;
 
     document.addEventListener("DOMContentLoaded", loadLeaderboard);
     addPanel.addEventListener("submit", addStudent);
-    commentForm.addEventListener("submit", saveComment);
 
     async function loadLeaderboard() {
       try {
@@ -467,7 +526,6 @@
           .map(student => ({
             name: String(student.name || "Unnamed student").trim(),
             hearts: Number(student.hearts || 0),
-            lastComment: String(student.lastComment || ""),
             pending: false
           }))
           .filter(student => student.name && !Number.isNaN(student.hearts));
@@ -496,7 +554,7 @@
           <article class="student-card">
             <div class="rank ${rankClass}">${rank}</div>
             <div>
-              <button class="student-name-button" type="button" title="Open comments for ${safeName}" onclick="openCommentsByIndex(${index})">${safeName}</button>
+              <button class="name-button" type="button" onclick="openCommentsByIndex(${index})">${safeName}</button>
               <div class="score-line">${escapeHTML(pendingText)}</div>
             </div>
             <div class="reward-control" aria-label="Update ${safeName}">
@@ -541,13 +599,8 @@
         const name = newStudentNameInput.value.trim();
         const hearts = Math.max(0, Math.floor(Number(newStudentHeartsInput.value) || 0));
 
-        if (!name) {
-          throw new Error("Enter the student name.");
-        }
-
-        if (findStudent(name)) {
-          throw new Error("This student already exists.");
-        }
+        if (!name) throw new Error("Enter the student name.");
+        if (findStudent(name)) throw new Error("This student already exists.");
 
         const previousCache = cloneStudents(studentsCache);
 
@@ -606,43 +659,162 @@
       }
     }
 
-    function openCommentsByIndex(index) {
+    async function openCommentsByIndex(index) {
       const student = studentsCache[index];
       if (!student) return;
-      openComments(student.name, student.lastComment || "");
-    }
 
-    async function openComments(studentName, cachedLastComment) {
-      selectedCommentStudent = studentName;
-      commentTitle.textContent = `${studentName} — comments`;
-      lastCommentBox.value = cachedLastComment || "No comments yet.";
-      newCommentBox.value = "";
-      setCommentStatus("Loading latest comment...");
+      selectedCommentStudent = student.name;
+      selectedComments = [];
+      selectedCommentIndex = -1;
+      commentStudentNameEl.textContent = student.name;
+      commentSubtitle.textContent = "Loading comments...";
+      hideCommentPanels();
       commentOverlay.classList.add("show");
-      newCommentBox.focus();
+      renderCommentBrowser();
 
       try {
         const data = await appsScriptRequest({
           action: "comments",
-          student: studentName
+          student: student.name
         });
 
         if (!data.success) {
           throw new Error(data.message || "Could not load comments.");
         }
 
-        const latestComment = String(data.lastComment || "");
-        lastCommentBox.value = latestComment || "No comments yet.";
-        updateLocalLastComment(studentName, latestComment);
-        setCommentStatus("Latest comment loaded.", "success");
+        selectedComments = Array.isArray(data.comments) ? data.comments : [];
+        selectedCommentIndex = selectedComments.length ? selectedComments.length - 1 : -1;
+        commentSubtitle.textContent = selectedComments.length ? "Last comment" : "No comments yet";
+        renderCommentBrowser();
       } catch (error) {
-        setCommentStatus(error.message, "error-text");
+        commentSubtitle.textContent = error.message;
+        renderCommentBrowser();
+      }
+    }
+
+    function renderCommentBrowser() {
+      const hasComments = selectedComments.length > 0 && selectedCommentIndex >= 0;
+
+      if (!hasComments) {
+        commentCountEl.textContent = "No comments";
+        commentContentEl.className = "comment-content comment-empty";
+        commentContentEl.innerHTML = "No comment yet. Click New comment to add one.";
+        return;
+      }
+
+      const current = selectedComments[selectedCommentIndex] || "";
+      commentCountEl.textContent = `Comment ${selectedCommentIndex + 1} of ${selectedComments.length}`;
+      commentContentEl.className = "comment-content";
+      commentContentEl.innerHTML = escapeHTML(current).split(String.fromCharCode(10)).join("<br>");
+    }
+
+    function showPreviousComment() {
+      if (!selectedComments.length) return;
+      selectedCommentIndex = Math.max(0, selectedCommentIndex - 1);
+      commentSubtitle.textContent = selectedCommentIndex === selectedComments.length - 1 ? "Last comment" : "Previous comment";
+      hideCommentPanels();
+      renderCommentBrowser();
+    }
+
+    function showNextComment() {
+      if (!selectedComments.length) return;
+      selectedCommentIndex = Math.min(selectedComments.length - 1, selectedCommentIndex + 1);
+      commentSubtitle.textContent = selectedCommentIndex === selectedComments.length - 1 ? "Last comment" : "Next comment";
+      hideCommentPanels();
+      renderCommentBrowser();
+    }
+
+    function openNewCommentPanel() {
+      editCommentPanel.classList.remove("show");
+      newCommentPanel.classList.add("show");
+      newCommentText.value = "";
+      newCommentText.focus();
+    }
+
+    function openEditCommentPanel() {
+      if (!selectedComments.length || selectedCommentIndex < 0) {
+        showSoftError("There is no comment to edit yet.");
+        return;
+      }
+
+      newCommentPanel.classList.remove("show");
+      editCommentPanel.classList.add("show");
+      editCommentText.value = getCommentBody(selectedComments[selectedCommentIndex]);
+      editCommentText.focus();
+    }
+
+    function hideCommentPanels() {
+      newCommentPanel.classList.remove("show");
+      editCommentPanel.classList.remove("show");
+    }
+
+    async function saveNewComment() {
+      try {
+        const comment = newCommentText.value.trim();
+
+        if (!selectedCommentStudent) throw new Error("No student selected.");
+        if (!comment) throw new Error("Write a comment first.");
+
+        commentSubtitle.textContent = "Saving new comment...";
+
+        const data = await appsScriptRequest({
+          action: "addcomment",
+          student: selectedCommentStudent,
+          comment: comment
+        });
+
+        if (!data.success) {
+          throw new Error(data.message || "The comment was not saved.");
+        }
+
+        selectedComments.push(data.savedComment || comment);
+        selectedCommentIndex = selectedComments.length - 1;
+        hideCommentPanels();
+        renderCommentBrowser();
+        commentSubtitle.textContent = "Last comment";
+        setStatus(`Comment saved: ${selectedCommentStudent}`, "success");
+      } catch (error) {
+        commentSubtitle.textContent = error.message;
+      }
+    }
+
+    async function saveEditedComment() {
+      try {
+        const comment = editCommentText.value.trim();
+
+        if (!selectedCommentStudent) throw new Error("No student selected.");
+        if (selectedCommentIndex < 0) throw new Error("No comment selected.");
+        if (!comment) throw new Error("The comment cannot be empty.");
+
+        commentSubtitle.textContent = "Saving edit...";
+
+        const data = await appsScriptRequest({
+          action: "editcomment",
+          student: selectedCommentStudent,
+          index: String(selectedCommentIndex),
+          comment: comment
+        });
+
+        if (!data.success) {
+          throw new Error(data.message || "The edited comment was not saved.");
+        }
+
+        selectedComments[selectedCommentIndex] = data.savedComment || comment;
+        hideCommentPanels();
+        renderCommentBrowser();
+        commentSubtitle.textContent = selectedCommentIndex === selectedComments.length - 1 ? "Last comment" : "Edited comment";
+        setStatus(`Comment edited: ${selectedCommentStudent}`, "success");
+      } catch (error) {
+        commentSubtitle.textContent = error.message;
       }
     }
 
     function closeComments() {
-      selectedCommentStudent = null;
       commentOverlay.classList.remove("show");
+      hideCommentPanels();
+      selectedCommentStudent = "";
+      selectedComments = [];
+      selectedCommentIndex = -1;
     }
 
     function closeCommentsFromOverlay(event) {
@@ -651,43 +823,11 @@
       }
     }
 
-    async function saveComment(event) {
-      event.preventDefault();
-
-      try {
-        validateWebAppUrl();
-
-        const studentName = String(selectedCommentStudent || "").trim();
-        const comment = newCommentBox.value.trim();
-
-        if (!studentName) {
-          throw new Error("No student selected.");
-        }
-
-        if (!comment) {
-          throw new Error("Write a comment first.");
-        }
-
-        setCommentStatus("Saving comment...");
-
-        const data = await appsScriptRequest({
-          action: "addcomment",
-          student: studentName,
-          comment: comment
-        });
-
-        if (!data.success) {
-          throw new Error(data.message || "The comment was not saved.");
-        }
-
-        const savedComment = String(data.savedComment || "");
-        lastCommentBox.value = savedComment;
-        newCommentBox.value = "";
-        updateLocalLastComment(studentName, savedComment);
-        setCommentStatus("Comment saved to Google Sheets.", "success");
-      } catch (error) {
-        setCommentStatus(error.message, "error-text");
-      }
+    function getCommentBody(comment) {
+      const text = String(comment || "").trim();
+      const separator = String.fromCharCode(10) + String.fromCharCode(10);
+      const firstBreak = text.indexOf(separator);
+      return firstBreak >= 0 ? text.slice(firstBreak + separator.length).trim() : text;
     }
 
     function appsScriptRequest(params) {
@@ -738,12 +878,7 @@
         existing.hearts = hearts;
         existing.pending = pending;
       } else {
-        studentsCache.push({
-          name,
-          hearts,
-          lastComment: "",
-          pending
-        });
+        studentsCache.push({ name, hearts, pending });
       }
 
       sortStudents();
@@ -752,11 +887,6 @@
     function markStudentSaved(name) {
       const student = findStudent(name);
       if (student) student.pending = false;
-    }
-
-    function updateLocalLastComment(name, comment) {
-      const student = findStudent(name);
-      if (student) student.lastComment = comment;
     }
 
     function findStudent(name) {
@@ -768,7 +898,6 @@
       return students.map(student => ({
         name: student.name,
         hearts: student.hearts,
-        lastComment: student.lastComment || "",
         pending: Boolean(student.pending)
       }));
     }
@@ -796,12 +925,6 @@
       statusEl.className = "status";
       if (type) statusEl.classList.add(type);
       statusEl.textContent = message;
-    }
-
-    function setCommentStatus(message, type = "") {
-      commentStatus.className = "comment-status";
-      if (type) commentStatus.classList.add(type);
-      commentStatus.textContent = message;
     }
 
     function showError(message) {
