@@ -19,6 +19,7 @@
       --bronze: #b45309;
       --success: #059669;
       --warning: #d97706;
+      --overlay: rgba(15, 23, 42, 0.55);
     }
 
     * {
@@ -129,7 +130,8 @@
       display: grid;
     }
 
-    input {
+    input,
+    textarea {
       width: 100%;
       border: 1px solid var(--border);
       border-radius: 10px;
@@ -137,6 +139,18 @@
       font-size: 1rem;
       background: white;
       color: var(--text);
+      font-family: Arial, sans-serif;
+    }
+
+    textarea {
+      min-height: 110px;
+      resize: vertical;
+      line-height: 1.45;
+    }
+
+    textarea[readonly] {
+      background: #f9fafb;
+      color: var(--muted);
     }
 
     .leaderboard {
@@ -189,15 +203,27 @@
       color: var(--bronze);
     }
 
-    .student-name {
+    .student-name-button {
+      background: transparent;
+      color: var(--text);
+      padding: 0;
+      border-radius: 0;
       font-size: 1.1rem;
       font-weight: bold;
-      margin-bottom: 4px;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .student-name-button:hover {
+      color: var(--accent);
+      opacity: 1;
+      text-decoration: underline;
     }
 
     .score-line {
       color: var(--muted);
       font-size: 0.9rem;
+      margin-top: 4px;
     }
 
     .reward-control {
@@ -242,6 +268,74 @@
       color: #991b1b;
     }
 
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--overlay);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 10;
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal {
+      width: 100%;
+      max-width: 560px;
+      background: var(--card);
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 20px 45px rgba(15, 23, 42, 0.22);
+    }
+
+    .modal h2 {
+      margin: 0 0 6px;
+      font-size: 1.35rem;
+    }
+
+    .modal p {
+      margin: 0 0 16px;
+      color: var(--muted);
+    }
+
+    .field {
+      margin-bottom: 14px;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: bold;
+      font-size: 0.95rem;
+    }
+
+    .comment-status {
+      min-height: 20px;
+      margin-top: -4px;
+      margin-bottom: 10px;
+      font-size: 0.92rem;
+      color: var(--muted);
+    }
+
+    .comment-status.success {
+      color: var(--success);
+    }
+
+    .comment-status.error-text {
+      color: var(--danger);
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
     @media (max-width: 650px) {
       .controls {
         align-items: flex-start;
@@ -260,6 +354,14 @@
         justify-content: flex-start;
         margin-left: 56px;
       }
+
+      .modal-actions {
+        flex-direction: column-reverse;
+      }
+
+      .modal-actions button {
+        width: 100%;
+      }
     }
   </style>
 </head>
@@ -267,7 +369,7 @@
   <main class="page">
     <section class="header">
       <h1>Class Leaderboard</h1>
-      <p>Use minus and plus to update hearts.</p>
+      <p>Use minus and plus to update hearts. Click a name to add comments.</p>
     </section>
 
     <section class="controls">
@@ -287,6 +389,30 @@
     <section id="leaderboard" class="leaderboard"></section>
   </main>
 
+  <section id="commentOverlay" class="modal-overlay" onclick="closeCommentsFromOverlay(event)">
+    <form id="commentForm" class="modal">
+      <h2 id="commentTitle">Student comments</h2>
+      <p>Review the latest saved comment and add a new one.</p>
+
+      <div class="field">
+        <label for="lastCommentBox">Last comment</label>
+        <textarea id="lastCommentBox" readonly placeholder="No comments yet."></textarea>
+      </div>
+
+      <div class="field">
+        <label for="newCommentBox">New comment</label>
+        <textarea id="newCommentBox" placeholder="Write a new comment about this student..."></textarea>
+      </div>
+
+      <div id="commentStatus" class="comment-status"></div>
+
+      <div class="modal-actions">
+        <button type="button" class="secondary" onclick="closeComments()">Cancel</button>
+        <button type="submit">Save comment</button>
+      </div>
+    </form>
+  </section>
+
   <script>
     /*
       SETUP
@@ -295,6 +421,7 @@
       3. In Apps Script, paste your Google Sheet URL into SHEET_URL.
       4. Your Google Sheet should have these headers:
          Student | Hearts
+      5. Comments are saved from column C onward in the same student row.
     */
 
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzLsmd7MqbtULT_wSvHADJoz0-sTX816t8IT2-HuNomppsWyVToEH7P7zmHo1Y2ZagE/exec";
@@ -309,11 +436,20 @@
     const newStudentNameInput = document.getElementById("newStudentName");
     const newStudentHeartsInput = document.getElementById("newStudentHearts");
 
+    const commentOverlay = document.getElementById("commentOverlay");
+    const commentForm = document.getElementById("commentForm");
+    const commentTitle = document.getElementById("commentTitle");
+    const lastCommentBox = document.getElementById("lastCommentBox");
+    const newCommentBox = document.getElementById("newCommentBox");
+    const commentStatus = document.getElementById("commentStatus");
+
     let studentsCache = [];
     let saveQueue = Promise.resolve();
+    let selectedCommentStudent = null;
 
     document.addEventListener("DOMContentLoaded", loadLeaderboard);
     addPanel.addEventListener("submit", addStudent);
+    commentForm.addEventListener("submit", saveComment);
 
     async function loadLeaderboard() {
       try {
@@ -331,6 +467,7 @@
           .map(student => ({
             name: String(student.name || "Unnamed student").trim(),
             hearts: Number(student.hearts || 0),
+            lastComment: String(student.lastComment || ""),
             pending: false
           }))
           .filter(student => student.name && !Number.isNaN(student.hearts));
@@ -359,7 +496,7 @@
           <article class="student-card">
             <div class="rank ${rankClass}">${rank}</div>
             <div>
-              <div class="student-name">${safeName}</div>
+              <button class="student-name-button" type="button" title="Open comments for ${safeName}" onclick="openCommentsByIndex(${index})">${safeName}</button>
               <div class="score-line">${escapeHTML(pendingText)}</div>
             </div>
             <div class="reward-control" aria-label="Update ${safeName}">
@@ -469,6 +606,90 @@
       }
     }
 
+    function openCommentsByIndex(index) {
+      const student = studentsCache[index];
+      if (!student) return;
+      openComments(student.name, student.lastComment || "");
+    }
+
+    async function openComments(studentName, cachedLastComment) {
+      selectedCommentStudent = studentName;
+      commentTitle.textContent = `${studentName} — comments`;
+      lastCommentBox.value = cachedLastComment || "No comments yet.";
+      newCommentBox.value = "";
+      setCommentStatus("Loading latest comment...");
+      commentOverlay.classList.add("show");
+      newCommentBox.focus();
+
+      try {
+        const data = await appsScriptRequest({
+          action: "comments",
+          student: studentName
+        });
+
+        if (!data.success) {
+          throw new Error(data.message || "Could not load comments.");
+        }
+
+        const latestComment = String(data.lastComment || "");
+        lastCommentBox.value = latestComment || "No comments yet.";
+        updateLocalLastComment(studentName, latestComment);
+        setCommentStatus("Latest comment loaded.", "success");
+      } catch (error) {
+        setCommentStatus(error.message, "error-text");
+      }
+    }
+
+    function closeComments() {
+      selectedCommentStudent = null;
+      commentOverlay.classList.remove("show");
+    }
+
+    function closeCommentsFromOverlay(event) {
+      if (event.target === commentOverlay) {
+        closeComments();
+      }
+    }
+
+    async function saveComment(event) {
+      event.preventDefault();
+
+      try {
+        validateWebAppUrl();
+
+        const studentName = String(selectedCommentStudent || "").trim();
+        const comment = newCommentBox.value.trim();
+
+        if (!studentName) {
+          throw new Error("No student selected.");
+        }
+
+        if (!comment) {
+          throw new Error("Write a comment first.");
+        }
+
+        setCommentStatus("Saving comment...");
+
+        const data = await appsScriptRequest({
+          action: "addComment",
+          student: studentName,
+          comment: comment
+        });
+
+        if (!data.success) {
+          throw new Error(data.message || "The comment was not saved.");
+        }
+
+        const savedComment = String(data.savedComment || "");
+        lastCommentBox.value = savedComment;
+        newCommentBox.value = "";
+        updateLocalLastComment(studentName, savedComment);
+        setCommentStatus("Comment saved to Google Sheets.", "success");
+      } catch (error) {
+        setCommentStatus(error.message, "error-text");
+      }
+    }
+
     function appsScriptRequest(params) {
       return new Promise((resolve, reject) => {
         const callbackName = "leaderboardCallback_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
@@ -520,6 +741,7 @@
         studentsCache.push({
           name,
           hearts,
+          lastComment: "",
           pending
         });
       }
@@ -532,6 +754,11 @@
       if (student) student.pending = false;
     }
 
+    function updateLocalLastComment(name, comment) {
+      const student = findStudent(name);
+      if (student) student.lastComment = comment;
+    }
+
     function findStudent(name) {
       const target = String(name || "").trim().toLowerCase();
       return studentsCache.find(student => student.name.toLowerCase() === target);
@@ -541,6 +768,7 @@
       return students.map(student => ({
         name: student.name,
         hearts: student.hearts,
+        lastComment: student.lastComment || "",
         pending: Boolean(student.pending)
       }));
     }
@@ -568,6 +796,12 @@
       statusEl.className = "status";
       if (type) statusEl.classList.add(type);
       statusEl.textContent = message;
+    }
+
+    function setCommentStatus(message, type = "") {
+      commentStatus.className = "comment-status";
+      if (type) commentStatus.classList.add(type);
+      commentStatus.textContent = message;
     }
 
     function showError(message) {
